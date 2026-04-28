@@ -1,0 +1,13 @@
+{
+  "name": "botman-whatsapp",
+  "version": "1.0.0",
+  "description": "WhatsApp worker for Botman",
+  "main": "send_message.js",
+  "scripts": {
+    "start": "node send_message.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

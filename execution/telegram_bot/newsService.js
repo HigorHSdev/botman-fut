@@ -12,9 +12,10 @@ async function loadTranslator() {
 }
 
 const parser = new RSSParser({
-    timeout: 10000,
+    timeout: 15000,
     headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/rss+xml, application/xml;q=0.9, */*;q=0.8'
     }
 });
 
@@ -25,22 +26,22 @@ const NEWS_SOURCES = [
     // === BRASIL (Sem tradução necessária) ===
     {
         name: '⚽ Globo Esporte',
-        url: 'https://ge.globo.com/feed/esporte/futebol/rss.xml',
+        url: 'https://ge.globo.com/rss/ge/futebol/',
         audience: 10,
         emoji: '🇧🇷',
         isPortuguese: true
     },
     {
-        name: '⚽ TNT Sports BR',
-        url: 'https://tntsports.com.br/rss/futebol.xml',
-        audience: 9,
+        name: '⚽ ESPN Brasil',
+        url: 'https://www.espn.com.br/espn/rss/futebol',
+        audience: 10,
         emoji: '🇧🇷',
         isPortuguese: true
     },
     {
-        name: '⚽ UOL Esporte',
-        url: 'https://rss.uol.com.br/feed/esporte.xml',
-        audience: 9,
+        name: '⚽ Gazeta Esportiva',
+        url: 'https://www.gazetaesportiva.com/futebol/feed/',
+        audience: 8,
         emoji: '🇧🇷',
         isPortuguese: true
     },

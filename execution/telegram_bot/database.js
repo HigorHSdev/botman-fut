@@ -39,6 +39,13 @@ const initDb = async () => {
                 url TEXT PRIMARY KEY,
                 sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS sent_alerts (
+                match_id TEXT,
+                chat_id BIGINT,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (match_id, chat_id)
+            );
         `);
         console.log('✅ Banco de dados PostgreSQL (Supabase) inicializado.');
     } catch (err) {
@@ -104,6 +111,24 @@ module.exports = {
             `);
         } catch (err) {
             console.error('Erro ao salvar notícia enviada:', err.message);
+        }
+    },
+
+    // Match alerts operations
+    isMatchAlertSent: async (matchId, chatId) => {
+        try {
+            const res = await pool.query('SELECT 1 FROM sent_alerts WHERE match_id = $1 AND chat_id = $2', [matchId, chatId]);
+            return res.rowCount > 0;
+        } catch (err) {
+            console.error('Erro ao verificar alerta de jogo:', err.message);
+            return false;
+        }
+    },
+    saveMatchAlert: async (matchId, chatId) => {
+        try {
+            await pool.query('INSERT INTO sent_alerts (match_id, chat_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [matchId, chatId]);
+        } catch (err) {
+            console.error('Erro ao salvar alerta de jogo:', err.message);
         }
     }
 };

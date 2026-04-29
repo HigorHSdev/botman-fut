@@ -4,6 +4,7 @@ const path = require('path');
 const http = require('http'); // Para o Health Check do Render
 const db = require('./database');
 const { getNewArticles, NEWS_SOURCES, formatArticleMessage } = require('./newsService');
+const { getUpcomingAlerts, getDailySummary } = require('./matchService');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 if (!process.env.TELEGRAM_BOT_TOKEN) {
@@ -201,8 +202,77 @@ async function broadcastNews() {
     }
 }
 
+// =====================
+// ALERTAS DE JOGOS
+// =====================
+async function broadcastMatchAlerts() {
+    console.log(`\n🕒 [${new Date().toLocaleTimeString('pt-BR')}] Verificando próximos jogos...`);
+    
+    try {
+        const matches = await getUpcomingAlerts();
+        const users = await db.getUsers();
+
+        if (matches && matches.length > 0 && users.length > 0) {
+            console.log(`🔔 Enviando ${matches.length} alertas de jogos para ${users.length} chats...`);
+            
+            for (const match of matches) {
+                const msg = `⚽ *JOGO EM BREVE (30 MIN)*\n\n` +
+                            `🏆 *${match.tournament}*\n` +
+                            `🆚 *${match.homeTeam}* vs *${match.awayTeam}*\n` +
+                            `⏰ Início: ${match.startTime}\n\n` +
+                            `${match.odds}\n\n` +
+                            `📺 *Onde assistir:* ${match.broadcasting}`;
+
+                for (const chatId of users) {
+                    try {
+                        const alreadySent = await db.isMatchAlertSent(match.id.toString(), chatId);
+                        if (!alreadySent) {
+                            await bot.telegram.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
+                            await db.saveMatchAlert(match.id.toString(), chatId);
+                        }
+                    } catch (err) {
+                        console.error(`❌ Falha ao enviar alerta para ${chatId}:`, err.message);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro no broadcast de jogos:', error.message);
+    }
+}
+
+async function broadcastDailySummary() {
+    console.log(`\n📅 [${new Date().toLocaleTimeString('pt-BR')}] Enviando resumo diário de jogos...`);
+    
+    try {
+        const summary = await getDailySummary();
+        const users = await db.getUsers();
+
+        if (summary && users.length > 0) {
+            for (const chatId of users) {
+                try {
+                    await bot.telegram.sendMessage(chatId, summary, { parse_mode: 'Markdown' });
+                } catch (err) {
+                    console.error(`❌ Falha ao enviar resumo para ${chatId}:`, err.message);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('❌ Erro no resumo diário:', error.message);
+    }
+}
+
 cron.schedule('*/5 * * * *', () => {
     broadcastNews();
+});
+
+cron.schedule('*/10 * * * *', () => {
+    broadcastMatchAlerts();
+});
+
+// Resumo diário à meia-noite (00:00)
+cron.schedule('0 0 * * *', () => {
+    broadcastDailySummary();
 });
 
 // Start on boot

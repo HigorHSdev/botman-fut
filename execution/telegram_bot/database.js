@@ -10,6 +10,21 @@ const pool = new Pool({
     }
 });
 
+// Log de depuração para conexão
+(async () => {
+    const url = process.env.DATABASE_URL || '';
+    if (!url) {
+        console.error('❌ Erro: DATABASE_URL está vazia no ambiente!');
+    } else {
+        const parts = url.split('@');
+        const host = parts.length > 1 ? parts[1].split(':')[0] : 'formato-invalido';
+        console.log(`📡 Tentando conectar ao host do banco: ${host}`);
+        if (host === 'base') {
+            console.error('⚠️ ALERTA: O host está configurado como "base". Verifique suas variáveis de ambiente no Render!');
+        }
+    }
+})();
+
 // Inicializar tabelas (PostgreSQL)
 const initDb = async () => {
     try {

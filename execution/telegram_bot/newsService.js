@@ -72,7 +72,7 @@ const NEWS_SOURCES = [
     },
     {
         name: '⚽ AS.com',
-        url: 'https://as.com/rss/tags/futbol.xml',
+        url: 'https://as.com/rss/futbol/primera.xml',
         audience: 8,
         emoji: '🇪🇸'
     },
@@ -84,7 +84,7 @@ const NEWS_SOURCES = [
     },
     {
         name: '⚽ OneFootball',
-        url: 'https://onefootball.com/en/feeds/rss',
+        url: 'https://onefootball.com/pt-br/rss',
         audience: 8,
         emoji: '📱'
     }

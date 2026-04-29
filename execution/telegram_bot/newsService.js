@@ -100,6 +100,9 @@ const FOOTBALL_KEYWORDS = [
 ];
 
 function isFootballRelated(article) {
+    // Fontes em português (GE, ESPN, Gazeta) já são filtradas por futebol na origem RSS
+    if (article.isPortuguese) return true;
+    
     const text = `${article.title} ${article.description}`.toLowerCase();
     return FOOTBALL_KEYWORDS.some(keyword => text.includes(keyword.toLowerCase()));
 }
@@ -265,11 +268,6 @@ async function getNewArticles() {
     }
 
     if (newArticles.length > 0) {
-        // Marcar como enviadas no banco (async)
-        for (const article of newArticles) {
-            await db.saveSentNews(article.url);
-        }
-
         console.log(`🌐 Processando ${newArticles.length} notícias...`);
         const processedArticles = [];
         for (const article of newArticles) {

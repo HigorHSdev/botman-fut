@@ -24,11 +24,24 @@ http.createServer((req, res) => {
     console.log(`✅ Server de Health Check rodando na porta ${PORT}`);
 });
 
+// Middleware de Logging para depuração
+bot.use((ctx, next) => {
+    if (ctx.message || ctx.callback_query) {
+        const from = ctx.from?.first_name || 'Desconhecido';
+        const type = ctx.chat?.type || 'unknown';
+        const text = ctx.message?.text || '[Outro tipo de mensagem]';
+        console.log(`📩 [${type}] Mensagem de ${from}: ${text}`);
+    }
+    return next();
+});
+
 // Register chat (user or group)
 async function registerChat(ctx) {
     const chatId = ctx.chat.id;
     const isGroup = ctx.chat.type === 'group' || ctx.chat.type === 'supergroup';
-    const chatName = isGroup ? ctx.chat.title : (ctx.from?.first_name || 'Usuário');
+    // Limpar nomes de grupo/usuário para não quebrar o Markdown v1
+    const rawName = isGroup ? ctx.chat.title : (ctx.from?.first_name || 'Usuário');
+    const chatName = rawName.replace(/[_*`]/g, ''); 
 
     if (await db.saveUser(chatId, chatName)) {
         const welcomeMsg = `⚽ *Bem-vindo ao Botman!*\n\n` +
@@ -72,8 +85,11 @@ bot.command('latest', async (ctx) => {
                 const msg = formatArticleMessage(article);
                 try {
                     await ctx.reply(msg, { parse_mode: 'MarkdownV2', disable_web_page_preview: false });
+                    // Marcar como enviada para não repetir no broadcast automático
+                    await db.saveSentNews(article.url);
                 } catch (err) {
                     await ctx.reply(`${article.emoji} ${article.title}\n\n${article.url}`);
+                    await db.saveSentNews(article.url);
                 }
                 await new Promise(r => setTimeout(r, 500));
             }
@@ -112,6 +128,22 @@ bot.command('help', async (ctx) => {
     ctx.reply(msg, { parse_mode: 'Markdown' });
 });
 
+bot.command('debug', async (ctx) => {
+    console.log(`🛠 [DEBUG] Solicitado por ${ctx.from?.first_name || 'Usuário'}`);
+    try {
+        const users = await db.getUsers();
+        const msg = `🤖 *Status do Botman*\n\n` +
+            `👥 *Usuários no Banco:* ${users.length}\n` +
+            `📡 *Fontes Configuradas:* ${NEWS_SOURCES.length}\n` +
+            `⏱ *Hora Local:* ${new Date().toLocaleTimeString('pt-BR')}\n` +
+            `🔗 *Banco de Dados:* Supabase (PostgreSQL)\n\n` +
+            `Se você não está recebendo notícias, tente usar /latest para testar manualmente.`;
+        ctx.reply(msg, { parse_mode: 'Markdown' });
+    } catch (err) {
+        ctx.reply(`❌ Erro ao acessar banco de dados: ${err.message}`);
+    }
+});
+
 // =====================
 // BROADCAST AUTOMÁTICO
 // =====================
@@ -122,32 +154,50 @@ async function broadcastNews() {
         const newArticles = await getNewArticles();
         const users = await db.getUsers();
 
-        if (newArticles && newArticles.length > 0 && users.length > 0) {
-            console.log(`📤 Enviando ${newArticles.length} notícias para ${users.length} chats...`);
-            
-            for (const article of newArticles.slice(0, 3)) {
-                const msg = formatArticleMessage(article, true);
+        if (!newArticles || newArticles.length === 0) {
+            console.log('📭 Nenhuma notícia nova encontrada nesta rodada.');
+            return;
+        }
 
-                for (const chatId of users) {
-                    try {
-                        await bot.telegram.sendMessage(chatId, msg, { 
-                            parse_mode: 'MarkdownV2',
-                            disable_web_page_preview: false 
-                        });
-                    } catch (err) {
-                        if (err.response?.error_code === 403 || err.response?.error_code === 400) {
-                            await db.removeUser(chatId);
-                            console.log(`🗑️ Usuário ${chatId} removido.`);
-                        } else {
-                            console.error(`❌ Falha ao enviar para ${chatId}:`, err.message);
-                        }
+        if (users.length === 0) {
+            console.log('⚠️ Nenhum usuário registrado no banco para receber notícias.');
+            return;
+        }
+
+        console.log(`📤 Enviando ${newArticles.length} notícias para ${users.length} chats...`);
+        
+        // Aumentado o limite de 3 para 10 notícias por rodada
+        for (const article of newArticles.slice(0, 10)) {
+            const msg = formatArticleMessage(article, true);
+            let successCount = 0;
+
+            for (const chatId of users) {
+                try {
+                    await bot.telegram.sendMessage(chatId, msg, { 
+                        parse_mode: 'MarkdownV2',
+                        disable_web_page_preview: false 
+                    });
+                    successCount++;
+                } catch (err) {
+                    if (err.response?.error_code === 403 || err.response?.error_code === 400) {
+                        await db.removeUser(chatId);
+                        console.log(`🗑️ Usuário ${chatId} removeu o bot ou chat é inválido. Removido do banco.`);
+                    } else {
+                        console.error(`❌ Falha ao enviar para ${chatId}:`, err.message);
                     }
                 }
-                await new Promise(r => setTimeout(r, 1000));
+                // Pequeno delay para evitar rate limit do Telegram se houver muitos usuários
+                await new Promise(r => setTimeout(r, 50));
             }
+
+            // IMPORTANTE: Só marcamos como enviada DEPOIS de tentar enviar para todos
+            await db.saveSentNews(article.url);
+            console.log(`✅ Notícia enviada para ${successCount}/${users.length} usuários: ${article.title.substring(0, 30)}...`);
+            
+            await new Promise(r => setTimeout(r, 1000));
         }
     } catch (error) {
-        console.error('❌ Erro no broadcast:', error.message);
+        console.error('❌ Erro crítico no broadcast:', error.message);
     }
 }
 
@@ -166,6 +216,11 @@ bot.launch().then(() => {
     console.log('============================================');
 }).catch((err) => {
     console.error('❌ Falha ao iniciar o bot:', err.message);
+});
+
+// Erro global para evitar que o bot morra
+bot.catch((err, ctx) => {
+    console.error(`💥 Erro crítico no Telegraf para ${ctx.updateType}:`, err);
 });
 
 process.once('SIGINT', () => bot.stop('SIGINT'));

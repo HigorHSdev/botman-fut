@@ -22,16 +22,17 @@ Manipulação de variáveis de ambiente
 Estruturação de projetos backend
 Automação de processos
 🛠️ Tecnologias utilizadas
-Node.js
-JavaScript
-Telegram Bot API
-Supabase
-Render
-⚙️ Funcionalidades
-🤖 Respostas automáticas via Telegram
-⚽ Envio de informações relacionadas ao futebol
-☁️ Armazenamento de dados em nuvem
-🌐 Bot online 24/7
-📡 Integração com APIs externas (se aplicável)
-
+- Node.js
+- JavaScript
+- Telegram Bot API
+- Supabase
+- Render
+  <br/>
+- ⚙️ Funcionalidades
+- 🤖 Respostas automáticas via Telegram
+- ⚽ Envio de informações relacionadas ao futebol
+- ☁️ Armazenamento de dados em nuvem
+- 🌐 Bot online 24/7
+- 📡 Integração com APIs externas (se aplicável)
+  <br/>
 Este projeto segue a arquitetura de 3 camadas definida em `AGENTE.md`.

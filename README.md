@@ -28,7 +28,7 @@ Automação de processos
 - Supabase
 - Render
   <br/>
-- ⚙️ Funcionalidades
+ ⚙️ Funcionalidades
 - 🤖 Respostas automáticas via Telegram
 - ⚽ Envio de informações relacionadas ao futebol
 - ☁️ Armazenamento de dados em nuvem

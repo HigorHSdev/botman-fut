@@ -20,11 +20,9 @@ const axiosInstance = axios.create({
 async function getMatchesByDate(dateStr) {
     try {
         console.log(`⚽ Buscando jogos para a data: ${dateStr}`);
-        const response = await axiosInstance.get('/api/v1/sport/football/scheduled-events', {
-            params: { date: dateStr }
-        });
+        // O formato correto para esta API é /api/v1/sport/football/scheduled-events/{date}
+        const response = await axiosInstance.get(`/api/v1/sport/football/scheduled-events/${dateStr}`);
 
-        // A estrutura depende da API, mas geralmente é algo como response.data.events
         return response.data.events || [];
     } catch (error) {
         console.error('❌ Erro ao buscar jogos:', error.message);
